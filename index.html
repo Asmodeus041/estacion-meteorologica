@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#010a04">
+<title>Estación meteorológica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--v:#2bff88;--bg:#010a04;--g:rgba(43,255,136,.55);--gs:rgba(43,255,136,.2)}
+:root.ambar{--v:#ffb641;--bg:#0a0600;--g:rgba(255,182,65,.55);--gs:rgba(255,182,65,.2)}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{background:radial-gradient(ellipse at center,rgba(255,255,255,.04) 0,transparent 70%),var(--bg);
+color:var(--v);font-family:"VT323","Courier New",monospace;font-size:20px;line-height:1.1;
+min-height:100vh;padding:14px;text-shadow:0 0 7px var(--g);animation:fl 6s infinite}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:40;
+background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65) 100%)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:41;
+background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0,rgba(0,0,0,.3) 1px,transparent 1px,transparent 3px)}
+body.off .pantalla{opacity:.7}
+a{color:var(--v)}
+@keyframes fl{0%,100%{opacity:1}50%{opacity:.97}52%{opacity:.9}54%{opacity:.98}}
+@keyframes pu{50%{opacity:0}}
+.pantalla{max-width:980px;margin:0 auto;border:2px solid var(--v);border-radius:18px;padding:16px;
+box-shadow:0 0 22px var(--gs),inset 0 0 38px var(--gs);transition:opacity .4s}
+.fila{display:flex;justify-content:space-between;align-items:center;gap:10px}
+header{border-bottom:2px solid var(--v);padding-bottom:10px;margin-bottom:14px}
+h1{font-size:1.7rem;font-weight:normal;letter-spacing:.08em}
+#reloj{font-size:1.4rem}
+.peq{font-size:1rem;margin-top:6px;opacity:.9}
+.dot{display:inline-block;width:.5em;height:.5em;background:var(--v);border-radius:50%;margin-right:.5em;
+box-shadow:0 0 8px var(--g);animation:pu 1.2s steps(1) infinite}
+body.off .dot{animation:none;opacity:.3;box-shadow:none}
+.rangos button{font:inherit;color:var(--v);background:transparent;border:1px solid var(--v);border-radius:4px;
+padding:1px 12px;margin-left:6px;cursor:pointer;text-shadow:inherit}
+.rangos button.on{background:var(--v);color:var(--bg);text-shadow:none}
+#g{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+section{grid-column:span 3;border:1px solid var(--v);border-radius:8px;padding:10px 12px;position:relative;
+box-shadow:0 0 12px var(--gs) inset}
+section:last-child{grid-column:span 6}
+@media(min-width:760px){section{grid-column:span 2}section:nth-child(n+4){grid-column:span 3}}
+.top{display:flex;align-items:center;gap:8px}
+.ic{width:22px;height:22px;flex:none}
+.ic svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.n{font-size:1rem;letter-spacing:.1em;opacity:.85;flex:1}
+.tag{font-size:.85rem;border:1px solid var(--v);border-radius:3px;padding:0 6px;letter-spacing:.06em}
+.tag:empty{display:none}
+.tag.al{background:var(--v);color:var(--bg);text-shadow:none;animation:pu 1s steps(1) infinite}
+.v{font-size:3rem;margin:4px 0 6px;line-height:1}
+.v small{font-size:1.2rem;opacity:.85}
+.b{height:10px;border:1px solid var(--v);border-radius:2px}
+.b i{display:block;height:100%;width:0;transition:width .8s;
+background:repeating-linear-gradient(90deg,var(--v) 0,var(--v) 6px,transparent 6px,transparent 9px)}
+svg.ch{display:block;width:100%;height:64px;margin-top:10px;touch-action:pan-y;cursor:crosshair;color:var(--v)}
+.gl{stroke:currentColor;stroke-opacity:.22;stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+.m{font-size:.9rem;opacity:.8;margin-top:3px;min-height:1em}
+footer{margin-top:16px;font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:10px;opacity:.9}
+footer button{font:inherit;color:var(--v);background:transparent;border:1px solid var(--v);border-radius:4px;
+padding:0 10px;cursor:pointer;text-shadow:inherit}
+.cur{display:inline-block;width:.5em;height:.9em;background:var(--v);vertical-align:-2px;animation:pu 1s steps(1) infinite}
+#boot{position:fixed;inset:0;background:var(--bg);z-index:30;display:flex;align-items:center;justify-content:center;
+transition:opacity .6s;text-shadow:0 0 7px var(--g);color:var(--v)}
+#boot.fuera{opacity:0;pointer-events:none}
+#boot pre{font-family:inherit;font-size:1.3rem;line-height:1.3}
+@media(prefers-reduced-motion:reduce){body,.dot,.cur,.tag.al{animation:none}#boot{display:none}}
+</style>
+</head>
+<body>
+<div id="boot"><pre id="bt"></pre></div>
+
+<div class="pantalla">
+  <header>
+    <div class="fila"><h1>ESTACIÓN METEOROLÓGICA</h1><span id="reloj"></span></div>
+    <div class="fila peq"><span><i class="dot"></i><span id="est">CONECTANDO...</span></span><span id="hace"></span></div>
+    <div class="fila peq"><span id="ult">&nbsp;</span>
+      <div class="rangos" id="rg">
+        <button data-r="24H" class="on">24H</button><button data-r="7D">7D</button><button data-r="30D">30D</button>
+      </div>
+    </div>
+  </header>
+  <main id="g"></main>
+  <footer>
+    <span>&gt; MONITOR AMBIENTAL <span class="cur"></span></span>
+    <span><button id="tema">[TEMA]</button> <a id="csv" href="#" target="_blank" rel="noopener">[CSV]</a></span>
+  </footer>
+</div>
+
+<script>
+// ====== CONFIGURACION ======
+var CANAL = "3584612";   // canal de ThingSpeak (debe estar compartido como publico)
+var READ_KEY = "";       // clave de LECTURA; dejar vacio si el canal es publico
+
+var ICONOS = {
+  t:'<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z"/>',
+  h:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  s:'<path d="M12 21v-9"/><path d="M12 12C12 8 9 6 5 6c0 4 2.5 6 7 6z"/><path d="M12 14c0-3 2-5 6-5 0 3-2 5-6 5z"/>',
+  p:'<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4"/><path d="M7 13h1M12 8v1M16 13h1"/>',
+  u:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
+};
+
+// field1..field5 del canal de ThingSpeak
+var C = [
+  {f:"field1", i:"t", n:"TEMPERATURA",   u:"°C",  a:15,  b:45,   d:1},
+  {f:"field2", i:"h", n:"HUMEDAD AIRE",  u:"%",   a:0,   b:100,  d:0},
+  {f:"field3", i:"s", n:"HUMEDAD SUELO", u:"%",   a:0,   b:100,  d:0,
+    tag:function(x){return x<30?"SECO":(x<70?"HÚMEDO":"SATURADO");}},
+  {f:"field4", i:"p", n:"PRESIÓN ATM",   u:"hPa", a:950, b:1050, d:0},
+  {f:"field5", i:"u", n:"ÍNDICE UV",     u:"",    a:0,   b:11,   d:1,
+    tag:function(x){return x<3?"BAJO":(x<6?"MODERADO":(x<8?"ALTO":(x<11?"MUY ALTO":"EXTREMO")));},
+    alerta:function(x){return x>=8;}}
+];
+// ThingSpeak promedia por bloques de X minutos para no pasar el limite de 8000 puntos
+var RANGOS = {"24H":{days:1, avg:10}, "7D":{days:7, avg:60}, "30D":{days:30, avg:240}};
+var rango = "24H";
+var serie = {};
+
+function $(id){ return document.getElementById(id); }
+
+// ---- tarjetas ----
+var g = $("g");
+C.forEach(function(c){
+  var e = document.createElement("section");
+  e.innerHTML = '<div class="top"><span class="ic"><svg viewBox="0 0 24 24">'+ICONOS[c.i]+'</svg></span>'
+    + '<span class="n">'+c.n+'</span><span class="tag" id="t_'+c.f+'"></span></div>'
+    + '<div class="v"><span id="v_'+c.f+'">--</span> <small>'+c.u+'</small></div>'
+    + '<div class="b"><i id="b_'+c.f+'"></i></div>'
+    + '<svg class="ch" id="s_'+c.f+'" viewBox="0 0 200 60" preserveAspectRatio="none"></svg>'
+    + '<div class="m" id="m_'+c.f+'"></div>';
+  g.appendChild(e);
+  var s = e.querySelector("svg.ch"), ocultar = null;
+  s.addEventListener("pointermove", function(ev){ cursor(c, ev); });
+  s.addEventListener("pointerdown", function(ev){ clearTimeout(ocultar); cursor(c, ev); });
+  s.addEventListener("pointerup", function(){ ocultar = setTimeout(function(){ sinCursor(c); }, 3000); });
+  s.addEventListener("pointerleave", function(){ sinCursor(c); });
+});
+
+function url(fmt, q){
+  return "https://api.thingspeak.com/channels/" + CANAL + "/feeds." + fmt + "?"
+    + (READ_KEY ? "api_key=" + READ_KEY + "&" : "") + q;
+}
+
+function estado(txt, seg){
+  $("est").textContent = txt;
+  $("hace").textContent = (seg === undefined) ? "" : "T-" + seg + "s";
+  document.body.className = (txt === "ENLACE ACTIVO") ? "" : "off";
+}
+
+function pon(c, v){
+  var t = $("v_"+c.f), b = $("b_"+c.f), tg = $("t_"+c.f), x = parseFloat(v);
+  if (isNaN(x)) { t.textContent = "--"; b.style.width = "0"; tg.textContent = ""; return; }
+  t.textContent = x.toFixed(c.d);
+  b.style.width = Math.max(0, Math.min(100, (x - c.a) / (c.b - c.a) * 100)) + "%";
+  tg.textContent = c.tag ? c.tag(x) : "";
+  tg.className = "tag" + ((c.alerta && c.alerta(x)) ? " al" : "");
+}
+
+function fecha(ms){
+  return new Date(ms).toLocaleString("es-CO", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", hour12:false});
+}
+
+// ---- grafica ----
+function spark(c, pts){
+  var s = $("s_"+c.f), m = $("m_"+c.f);
+  serie[c.f] = pts;
+  if (pts.length < 2) { s.innerHTML = ""; c.resumen = "SIN HISTORIAL"; m.textContent = c.resumen; return; }
+  var vs = pts.map(function(p){ return p.v; });
+  var lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs), span = (hi - lo) || 1;
+  var linea = pts.map(function(p, i){
+    return (i / (pts.length - 1) * 200).toFixed(1) + "," + (54 - (p.v - lo) / span * 48).toFixed(1);
+  }).join(" ");
+  s.innerHTML = '<defs><linearGradient id="gr_'+c.f+'" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="currentColor" stop-opacity=".35"/>'
+    + '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>'
+    + '<line class="gl" x1="0" y1="15" x2="200" y2="15"/><line class="gl" x1="0" y1="30" x2="200" y2="30"/>'
+    + '<line class="gl" x1="0" y1="45" x2="200" y2="45"/>'
+    + '<polygon points="0,60 '+linea+' 200,60" fill="url(#gr_'+c.f+')"/>'
+    + '<polyline points="'+linea+'" fill="none" stroke="currentColor" stroke-width="1.6" vector-effect="non-scaling-stroke"/>'
+    + '<line id="x_'+c.f+'" x1="0" y1="0" x2="0" y2="60" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" style="display:none"/>';
+  c.resumen = "MIN " + lo.toFixed(c.d) + "   MAX " + hi.toFixed(c.d);
+  m.textContent = c.resumen;
+}
+
+function cursor(c, ev){
+  var pts = serie[c.f];
+  if (!pts || pts.length < 2) return;
+  var r = $("s_"+c.f).getBoundingClientRect();
+  var x = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+  var i = Math.round(x * (pts.length - 1)), p = pts[i];
+  var ln = $("x_"+c.f), px = (i / (pts.length - 1) * 200).toFixed(1);
+  ln.setAttribute("x1", px); ln.setAttribute("x2", px); ln.style.display = "";
+  $("m_"+c.f).textContent = fecha(p.t) + "   " + p.v.toFixed(c.d) + " " + c.u;
+}
+
+function sinCursor(c){
+  var ln = $("x_"+c.f);
+  if (ln) ln.style.display = "none";
+  $("m_"+c.f).textContent = c.resumen || "";
+}
+
+// ---- datos ----
+async function ultimo(){
+  try {
+    var r = await fetch(url("json", "results=1"));
+    var d = await r.json();
+    var f = d.feeds && d.feeds[0];
+    if (!f) { estado("SIN DATOS"); return; }
+    C.forEach(function(c){ pon(c, f[c.f]); });
+    var ms = new Date(f.created_at).getTime();
+    var seg = Math.round((Date.now() - ms) / 1000);
+    $("ult").textContent = "ÚLTIMA LECTURA " + new Date(ms).toLocaleTimeString("es-CO", {hour12:false});
+    estado(seg > 180 ? "SIN SEÑAL" : "ENLACE ACTIVO", seg);
+  } catch (e) {
+    estado("SIN CONEXIÓN");
+  }
+}
+
+async function historial(){
+  var R = RANGOS[rango];
+  var q = "days=" + R.days + "&average=" + R.avg;
+  $("csv").href = url("csv", q);
+  try {
+    var r = await fetch(url("json", q));
+    var d = await r.json();
+    var feeds = d.feeds || [];
+    C.forEach(function(c){
+      var pts = [];
+      feeds.forEach(function(f){
+        var v = parseFloat(f[c.f]);
+        if (!isNaN(v)) pts.push({t:new Date(f.created_at).getTime(), v:v});
+      });
+      spark(c, pts);
+    });
+  } catch (e) { /* se reintenta en el siguiente ciclo */ }
+}
+
+$("rg").addEventListener("click", function(ev){
+  var r = ev.target.getAttribute("data-r");
+  if (!r) return;
+  rango = r;
+  Array.prototype.forEach.call(this.children, function(b){
+    b.className = (b.getAttribute("data-r") === r) ? "on" : "";
+  });
+  historial();
+});
+
+// ---- tema verde / ambar ----
+function aplicarTema(t){
+  document.documentElement.className = (t === "ambar") ? "ambar" : "";
+  $("tema").textContent = (t === "ambar") ? "[TEMA: ÁMBAR]" : "[TEMA: VERDE]";
+}
+var tema = "verde";
+try { tema = localStorage.getItem("tema") || "verde"; } catch (e) {}
+aplicarTema(tema);
+$("tema").addEventListener("click", function(){
+  tema = (tema === "verde") ? "ambar" : "verde";
+  aplicarTema(tema);
+  try { localStorage.setItem("tema", tema); } catch (e) {}
+});
+
+// ---- reloj ----
+function reloj(){ $("reloj").textContent = new Date().toLocaleTimeString("es-CO", {hour12:false}); }
+reloj(); setInterval(reloj, 1000);
+
+// ---- arranque tipo terminal ----
+(function(){
+  var lineas = ["> INICIANDO MONITOR AMBIENTAL...", "> CANAL " + CANAL + " ........ OK",
+                "> SENSORES: 5", "> ENLAZANDO CON LA ESTACIÓN_"];
+  var bt = $("bt"), i = 0;
+  var t = setInterval(function(){
+    if (i < lineas.length) { bt.textContent += (i ? "\n" : "") + lineas[i++]; return; }
+    clearInterval(t);
+    setTimeout(function(){ $("boot").className = "fuera"; }, 500);
+  }, 280);
+})();
+
+ultimo(); historial();
+setInterval(ultimo, 15000);
+setInterval(historial, 120000);
+</script>
+</body>
+</html>
