@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#010a04">
-<title>Estación meteorológica</title>
+<title>Panel de monitoreo T.E.N.S.E.R</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -26,10 +26,11 @@ a{color:var(--v)}
 @keyframes pu{50%{opacity:0}}
 .pantalla{max-width:980px;margin:0 auto;border:2px solid var(--v);border-radius:18px;padding:16px;
 box-shadow:0 0 22px var(--gs),inset 0 0 38px var(--gs);transition:opacity .4s}
-.fila{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.fila{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 header{border-bottom:2px solid var(--v);padding-bottom:10px;margin-bottom:14px}
-h1{font-size:1.7rem;font-weight:normal;letter-spacing:.08em}
-#reloj{font-size:1.4rem}
+h1{min-width:0;font-size:1.3rem;font-weight:normal;letter-spacing:.08em;display:flex;flex-wrap:wrap;align-items:baseline;column-gap:.45em;line-height:1}
+h1 .tenser{font-size:clamp(2.2rem,10vw,3.2rem);letter-spacing:.14em;text-shadow:0 0 12px var(--g),0 0 26px var(--gs)}
+#reloj{font-size:1.4rem;flex:none;margin-left:auto;white-space:nowrap}
 .peq{font-size:1rem;margin-top:6px;opacity:.9}
 .dot{display:inline-block;width:.5em;height:.5em;background:var(--v);border-radius:50%;margin-right:.5em;
 box-shadow:0 0 8px var(--g);animation:pu 1.2s steps(1) infinite}
@@ -73,7 +74,7 @@ transition:opacity .6s;text-shadow:0 0 7px var(--g);color:var(--v)}
 
 <div class="pantalla">
   <header>
-    <div class="fila"><h1>ESTACIÓN METEOROLÓGICA</h1><span id="reloj"></span></div>
+    <div class="fila"><h1><span>PANEL DE MONITOREO</span><span class="tenser">T.E.N.S.E.R</span></h1><span id="reloj"></span></div>
     <div class="fila peq"><span><i class="dot"></i><span id="est">CONECTANDO...</span></span><span id="hace"></span></div>
     <div class="fila peq"><span id="ult">&nbsp;</span>
       <div class="rangos" id="rg">
@@ -201,19 +202,38 @@ function sinCursor(c){
 }
 
 // ---- datos ----
+var TIMEOUT = 20;        // segundos sin lectura nueva antes de blanquear el panel
+var ultFeed = null, ultMs = 0, fallo = false;
+
+function blanquear(){ C.forEach(function(c){ pon(c, NaN); }); }
+
+// se ejecuta cada segundo: decide si mostrar la lectura o blanquear
+function evaluar(){
+  if (!ultFeed) { if (fallo) estado("SIN CONEXIÓN"); return; }
+  var seg = Math.max(0, Math.round((Date.now() - ultMs) / 1000));
+  if (fallo || seg > TIMEOUT) {
+    blanquear();
+    estado(fallo ? "SIN CONEXIÓN" : "SIN SEÑAL", seg);
+  } else {
+    C.forEach(function(c){ pon(c, ultFeed[c.f]); });
+    estado("ENLACE ACTIVO", seg);
+  }
+}
+
 async function ultimo(){
   try {
     var r = await fetch(url("json", "results=1"));
     var d = await r.json();
     var f = d.feeds && d.feeds[0];
-    if (!f) { estado("SIN DATOS"); return; }
-    C.forEach(function(c){ pon(c, f[c.f]); });
-    var ms = new Date(f.created_at).getTime();
-    var seg = Math.round((Date.now() - ms) / 1000);
-    $("ult").textContent = "ÚLTIMA LECTURA " + new Date(ms).toLocaleTimeString("es-CO", {hour12:false});
-    estado(seg > 180 ? "SIN SEÑAL" : "ENLACE ACTIVO", seg);
+    fallo = false;
+    if (!f) { ultFeed = null; blanquear(); estado("SIN DATOS"); return; }
+    ultFeed = f;
+    ultMs = new Date(f.created_at).getTime();
+    $("ult").textContent = "ÚLTIMA LECTURA " + new Date(ultMs).toLocaleTimeString("es-CO", {hour12:false});
+    evaluar();
   } catch (e) {
-    estado("SIN CONEXIÓN");
+    fallo = true;
+    evaluar();
   }
 }
 
@@ -277,8 +297,9 @@ reloj(); setInterval(reloj, 1000);
 })();
 
 ultimo(); historial();
-setInterval(ultimo, 5000);
-setInterval(historial, 5000);
+setInterval(ultimo, 15000);
+setInterval(evaluar, 1000);
+setInterval(historial, 15000);
 </script>
 </body>
 </html>
